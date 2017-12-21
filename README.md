@@ -6,6 +6,7 @@ You can download the files from Github.com or use directly Git :
 
 ```
 git clone https://github.com/SmurfyFR/backup-script.git
+chmod +x backup.sh
 ```
 
 ## Usage
@@ -13,7 +14,7 @@ git clone https://github.com/SmurfyFR/backup-script.git
 Once downloaded, it's very easy to get started. You just need to call the backup.sh script with the correct parameters !
 
 ```
-cd backup-script # Here is where 
+cd backup-script # Here is where you downloaded the script
 ./backup.sh root@server029.company.tld:/ /volumes/backup/server029
 ```
 
