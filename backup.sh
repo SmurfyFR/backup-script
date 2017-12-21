@@ -16,7 +16,7 @@ eval EXCLUDE_FILE=$EXCLUDE_FILE
 
 SSH_PORT=22
 RSYNC_OPT="--quiet"
-while getopts :pv-:verbose option
+while getopts :p:v-:verbose option
 do
     case "${option}"
     in
