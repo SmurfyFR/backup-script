@@ -4,19 +4,30 @@ die () {
     exit 1
 }
 
-[ "$#" -gt 1 ] || die "Usage : $0 [-p port] root@hostname.tld:/ /volumes/backup/dest"
+_usage () {
+    die "Usage : $0 [-p port] [--dry-run] [--verbose|-v] root@hostname.tld:/ /volumes/backup/dest"
+}
+
+[ "$#" -gt 1 ] || _usage
 
 source $(dirname $0)/backup_config.sh
 eval SSH_FILE=$SSH_FILE
 eval EXCLUDE_FILE=$EXCLUDE_FILE
 
 SSH_PORT=22
-while getopts p: option
+RSYNC_OPT="--quiet"
+while getopts :pv-:verbose option
 do
     case "${option}"
     in
     p) SSH_PORT=${OPTARG};;
-    [?])    die "Usage : $0 [-p port] root@hostname.tld:/ /volumes/backup/dest"
+    v) RSYNC_OPT=${RSYNC_OPT/"--quiet"/"--progress -v"};;
+    -) case "${OPTARG}" in
+        dry-run) RSYNC_OPT="$RSYNC_OPT --dry-run";;
+        verbose) RSYNC_OPT=${RSYNC_OPT/"--quiet"/"--progress -v"};;
+        *) _usage
+       esac;;
+    [?]) _usage
     esac
 done
 shift $(($OPTIND - 1))
@@ -74,8 +85,15 @@ echo $DATE > $DST/last_date
 echo "Running RSYNC from $SRC to $DST/last using port $SSH_PORT ..."
 # Rsync call : basically archiving everything
 # You can use -v --progress for more detail. Don't forget that --dry-run is available.
-rsync -e "ssh -p $SSH_PORT -i $SSH_FILE" -aPx -q -i --delete-after --numeric-ids --exclude-from="$EXCLUDE_FILE" $SRC/ $DST/last/
-echo "Finished RSYNC."
+rsync -e "ssh -p $SSH_PORT -i $SSH_FILE" -aPx $RSYNC_OPT --delete-after --numeric-ids --exclude-from="$EXCLUDE_FILE" $SRC/ $DST/last/
 
-echo "Backup finished at "`date "+%d-%m-%Y %T"`
-echo "Done  : "`date "+%Y-%m-%d %T"` >> $DST/log
+if [ $? -eq 0 ]
+then
+    echo "Finished RSYNC."
+
+    echo "Backup finished at "`date "+%d-%m-%Y %T"`
+    echo "Done  : "`date "+%Y-%m-%d %T"` >> $DST/log
+else
+    echo "WARNING: RSYNC finished with an error code."
+    echo "Error : "`date "+%Y-%m-%d %T"` >> $DST/log
+fi
