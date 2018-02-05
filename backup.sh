@@ -36,23 +36,35 @@ shift $(($OPTIND - 1))
 SRC=$1
 DST=$2
 
+# Make sure dest folder is created
+mkdir -p $DST
+
 # Get current datetime
-DATE=`date +%d-%m-%Y_%H` # Add -%H -%M -%S if multiple backups per day
+DATE=`date +%Y-%m-%d_%H`
 
 # Get backup name from 7 days ago
-EXPIRATION=`date +"%d-%m-%Y_%H" -d "7 days ago"`  # Add -%H -%M -%S if multiple backups per day
+EXPIRATION=`date -d "7 days ago" +%s`
 
-if [ -d $DST/$EXPIRATION ]
-then
-        echo "Deleting backup : $EXPIRATION ..."
-        rm -rf $DST/$EXPIRATION
-        echo
-fi
+for i in $(ls $DST)
+do
+    if test -d $DST/$i; then
+        # Only match YYYY-MM-DD_HH directories
+        if [[ $i =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}$ ]]; then
+            # Parse into full date (YYYY-MM-DD HH:00:00)
+            i_date=`date -d "${i%_*} ${i#*_}:00:00" +%s`
+
+            if [ $i_date -le $EXPIRATION ]; then
+                echo "Deleting expired backup (7 days) : $i ..."
+                rm -rf $DST/$i
+            fi
+        fi
+    fi
+done
 
 # Create tmp folder
 mkdir -p $DST/tmp
 
-echo "Starting backup "`date "+%d-%m-%Y %T"`
+echo "Starting backup "`date "+%Y-%m-%d %T"`
 echo "Start : "`date "+%Y-%m-%d %T"` >> $DST/log
 
 
@@ -91,7 +103,7 @@ if [ $? -eq 0 ]
 then
     echo "Finished RSYNC."
 
-    echo "Backup finished at "`date "+%d-%m-%Y %T"`
+    echo "Backup finished at "`date "+%Y-%m-%d %T"`
     echo "Done  : "`date "+%Y-%m-%d %T"` >> $DST/log
 else
     echo "WARNING: RSYNC finished with an error code."
